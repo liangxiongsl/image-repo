@@ -1,0 +1,48 @@
+=== first commit
+require 'open-uri'
+require 'net/http'
+require 'json'
+require 'base64'
+
+# 实现 github 官方给出的 api 接口
+def public_send(method,file_path:'',git_path:nil,body:{},msg:nil)
+  git_path=git_path||"test/#{File.basename(file_path)}"
+  url=URI("https://api.github.com/repos/liangxiongsl/image-repo/contents/#{git_path}")
+
+  case method
+  when 'get'
+    req=Net::HTTP::Get.new(url)
+    req['Authorization']='token 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'
+  when 'put'
+    req=Net::HTTP::Put.new(url)
+    req['Authorization']='token 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'
+    req.body={
+      'message':msg||'upload file',
+      'content':Base64.enc  ode64(File.binread(file_path))
+    }.to_json
+  when 'delete'
+    req=Net::HTTP::Delete.new(url)
+    req['Authorization']='token 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'
+    req.body={
+      'message':msg||'delete file',
+      'sha':JSON.parse(public_send('get',file_path:file_path,git_path:git_path))['sha']
+    }.to_json
+  end
+
+  Net::HTTP.start(url.hostname,url.port,use_ssl: true ) do |http|
+    http.request(req)
+  end.body
+end
+
+# 1)上传
+ret=public_send('put',file_path:'cxk.jpg')
+puts ret
+
+# # 2)读取
+# ret=public_send('get',file_path:'cxk.jpg')
+# puts ret
+# File.binwrite('cxk_get.jpg',Base64.decode64(JSON.parse(ret)['content']))
+#
+# # 3)删除
+# ret=public_send('delete',file_path:'cxk.jpg')
+# puts ret
