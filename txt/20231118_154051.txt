@@ -1,0 +1,140 @@
+=== PyQt5 音乐播放器
+import os
+import sys
+from PyQt5.QtWidgets import QApplication,QWidget,QVBoxLayout,QHBoxLayout, QFileDialog,QLabel,QPushButton,QTableWidget,QTableWidgetItem
+from PyQt5.QtMultimedia import QMediaPlayer,QMediaContent
+from PyQt5.QtCore import  QUrl
+
+class MusicPlayer(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('Music Player')
+        self.setup_ui()
+        self.setup_player()
+    def setup_ui(self):
+        # 选中歌曲的标签，导入文件按钮，导入文件列表按钮，播放按钮，暂停按钮，上一首/下一首按钮
+        self.song_label = QLabel('No song selected')
+        self.importfiles_button = QPushButton('import file list')
+        self.importfiles_button.clicked.connect(self.import_files)
+        self.play_button = QPushButton('play')
+        self.play_button.clicked.connect(self.on_play)
+        self.stop_button = QPushButton('stop')
+        self.stop_button.clicked.connect(self.on_stop)
+        self.pre_button = QPushButton('pre song')
+        self.pre_button.clicked.connect(self.on_pre)
+        self.next_button = QPushButton('next song')
+        self.next_button.clicked.connect(self.on_next)
+
+        # 设置并添加样式（纵向排列）
+        layout = QVBoxLayout()
+        layout.addWidget(self.song_label)
+        layout.addWidget(self.importfiles_button)
+        layout.addWidget(self.play_button)
+        layout.addWidget(self.stop_button)
+        layout.addWidget(self.pre_button)
+        layout.addWidget(self.next_button)
+
+        # 音乐表格
+        self.music_table = QTableWidget()
+        self.music_table.setColumnCount(2)
+        self.music_table.setHorizontalHeaderLabels(['音乐名称','路径'])
+        self.music_table.itemClicked.connect(self.on_click)
+        self.music_table.itemDoubleClicked.connect(self.on_doubleclick)
+
+        # 主样式——用于整合上述样式和组件
+        main_layout = QHBoxLayout()
+        main_layout.addLayout(layout)
+        main_layout.addWidget(self.music_table)
+        self.setLayout(main_layout)
+    def setup_player(self):
+        self.files = []
+        self.playingfileindex = 0
+        self.player = QMediaPlayer()
+
+        self.defaut_path='E:/LX/app/魔音Morin/Cache/Song'
+        self.add_file([f'{self.defaut_path}/{basename}' for basename in os.listdir(self.defaut_path) if basename.endswith('.mp3')])
+        self.switch_file(self.playingfileindex)
+
+    def add_file(self, files):
+        self.files += files
+        length = len(self.files)
+        self.music_table.setRowCount(length)
+        # print(length)
+        for i in range(len(files)):
+            idx = length - i - 1
+            file = self.files[idx]
+            dirname, basename = os.path.split(file)
+            item0 = QTableWidgetItem(basename)
+            item1 = QTableWidgetItem(dirname)
+            self.music_table.setItem(idx, 0, item0)
+            self.music_table.setItem(idx, 1, item1)
+
+    def switch_file(self,index):
+        # self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.files[0])))
+        try:
+            file=self.files[index]
+            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(file)))
+        except Exception as e:
+            pass
+
+    # 导入多个音乐文件
+    def import_files(self):
+        # file_path, _ = QFileDialog.getOpenFileName(self, "Open Music File", self.defaut_path, 'file(*.mp3;*.wav)')
+        file_list,_ = QFileDialog.getOpenFileNames(self,"Open Music File", self.defaut_path,'file(*.mp3;*.wav)')
+        self.add_file(file_list)
+
+
+    # 更新播放音乐的下标
+    def set_playingfileindex(self,index):
+        try:
+            self.files[index]
+        except Exception as e:
+            return
+
+        self.playingfileindex = index
+        filepath = self.files[index]
+        if filepath:
+            self.plaing_file=filepath
+            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(filepath)))
+            self.song_label.setText(f'Selected song: {filepath}')
+
+    # 播放上一首
+    def on_pre(self):
+        self.set_playingfileindex(self.playingfileindex - 1)
+        self.on_play()
+
+    # 播放下一首
+    def on_next(self):
+        self.set_playingfileindex(self.playingfileindex + 1)
+        self.on_play()
+
+    # 播放或暂停音乐
+    def on_play(self):
+        # print(QMediaPlayer.StoppedState, QMediaPlayer.PlayingState, QMediaPlayer.PausedState)
+        # print(self.playingfileindex,self.player.state())
+        if self.player.state() != QMediaPlayer.PlayingState:
+            self.player.play()
+            self.play_button.setText('pause')
+        else:
+            self.player.pause()
+            self.play_button.setText('play')
+
+    # 停止播放
+    def on_stop(self):
+        self.player.stop()
+        self.play_button.setText('play')
+
+    def on_click(self,item):
+        self.switch_file(item.row())
+
+    def on_doubleclick(self,item):
+        # print(item.row(),item.column())
+        self.switch_file(item.row())
+        self.on_play()
+
+app=QApplication(sys.argv)
+
+player=MusicPlayer()
+player.show()
+
+sys.exit(app.exec_())
