@@ -1,0 +1,7 @@
+=== 
+body = {
+      'message': msg,
+      'sha': self.get(repo,git_path)['sha']
+    }.to_json
+    Api_net.req('put', @@domain, path:path, head:head, body:body)
+  end
